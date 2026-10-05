@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow">
+<title>เพิ่มเพื่อน LINE พี่ผึ้ง</title>
+<style>body{margin:0;background:#f4f8fb;color:#0A1545;font-family:system-ui,sans-serif}main{max-width:440px;margin:48px auto;padding:28px;text-align:center}h1{font-size:24px}p{line-height:1.7}button,a{display:inline-block;border:0;border-radius:10px;background:#218F27;color:white;padding:15px 24px;font:inherit;text-decoration:none;cursor:pointer}[hidden]{display:none!important}</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
+</head>
+<body>
+<main><h1>เพิ่มเพื่อน LINE พี่ผึ้ง</h1>
+<p id="status" role="status" aria-live="polite">กำลังเชื่อมต่อ LINE…</p>
+<button id="retry" type="button" hidden>ลองอีกครั้ง</button></main>
+<script>
+'use strict';
+const LIFF_ID='2011333776-W5vn3Aly';
+const BACKEND='https://script.google.com/macros/s/AKfycbz1tPDpD1ap5izHhPRhO7wEzc5udW0E-saBnPLB31KpJue0dYF4KgLdlKwVcth8Fh_oHg/exec?mode=liff_receipt_test';
+let busy=false;
+async function connect() {
+  if(busy)return;busy=true;
+  const status=document.getElementById('status'),retry=document.getElementById('retry');
+  retry.hidden=true;
+  try {
+    if(!window.liff)throw new Error('โหลด LINE ไม่สำเร็จ กรุณาลองอีกครั้ง');
+    await liff.init({liffId:LIFF_ID,withLoginOnExternalBrowser:true});
+    if(!liff.isLoggedIn())return;
+    // LIFF handles its redirects before reading the final ticket.
+    const ticket=new URL(location.href).searchParams.get('ticket');
+    const idToken=liff.getIDToken();
+    if(!ticket || !/^[A-Za-z0-9_-]{16,200}$/.test(ticket))throw new Error('กรุณากลับไปกดเพิ่มเพื่อน LINE จากรายการที่ส่งแล้ว');
+    if(!idToken)throw new Error('ยืนยันบัญชี LINE ไม่สำเร็จ กรุณาลองอีกครั้ง');
+    status.textContent='กำลังส่งรายละเอียดรายการให้คุณ…';
+    // Top-level POST avoids cross-origin AJAX and never puts the ID token in a URL.
+    const form=document.createElement('form');
+    form.method='POST';form.action=BACKEND;form.target='_self';form.hidden=true;
+    for(const [name,value] of Object.entries({ticket,idToken,format:'html'})) {
+      const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input);
+    }
+    document.body.appendChild(form);form.submit();
+  } catch(error) {
+    status.textContent=error instanceof Error?error.message:'เชื่อมต่อไม่สำเร็จ กรุณาลองอีกครั้ง';retry.hidden=false;busy=false;
+  }
+}
+document.getElementById('retry').addEventListener('click',connect);
+window.addEventListener('DOMContentLoaded',connect);
+</script>
+</body>
+</html>
