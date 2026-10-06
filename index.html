@@ -6,8 +6,29 @@
 <title>เพิ่มเพื่อนไลน์ พีพีแอสเซท</title>
 <style>body{margin:0;background:#f4f8fb;color:#0A1545;font-family:system-ui,sans-serif}main{box-sizing:border-box;width:100%;max-width:440px;margin:48px auto;padding:28px;text-align:center}h1{font-size:clamp(20px,6vw,24px);overflow-wrap:anywhere}p{line-height:1.7}button,a{display:inline-block;border:0;border-radius:10px;background:#218F27;color:white;padding:15px 24px;font:inherit;text-decoration:none;cursor:pointer}[hidden]{display:none!important}</style>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
+<script>
+(function(){
+  const p=new URL(location.href).searchParams;
+  const state=p.get('liff.state')||'';
+  let preview=false;
+  try{preview=new URL(state,location.origin+location.pathname).pathname.endsWith('/test-mobile.html');}catch(_){}
+  if(!preview||!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent))return;
+  document.documentElement.classList.add('pp-mobile-preview-entry');
+})();
+</script>
+<style>
+html.pp-mobile-preview-entry,html.pp-mobile-preview-entry body{background:#050d17!important}
+html.pp-mobile-preview-entry body{min-height:100vh;min-height:100dvh;display:grid;place-items:center;margin:0;padding:14px;box-sizing:border-box}
+html.pp-mobile-preview-entry main{display:none!important}
+.pp-mobile-entry-wait{display:none}
+html.pp-mobile-preview-entry .pp-mobile-entry-wait{display:block;box-sizing:border-box;width:100%;max-width:430px;padding:22px 16px;border:1px solid rgba(156,255,91,.48);border-radius:18px;background:linear-gradient(145deg,rgba(9,30,44,.98),rgba(5,19,34,.98));text-align:center;color:#eaf3ff;font:15px/1.65 system-ui,sans-serif}
+.pp-mobile-entry-wait strong{display:block;color:#B9FF86;font-size:18px;font-weight:900}
+.pp-mobile-entry-spinner{width:30px;height:30px;border:4px solid rgba(156,255,91,.24);border-top-color:#B9FF86;border-radius:50%;margin:0 auto 13px;animation:ppMobileEntrySpin .8s linear infinite}
+@keyframes ppMobileEntrySpin{to{transform:rotate(360deg)}}
+</style>
 </head>
 <body>
+<div class="pp-mobile-entry-wait" role="status"><div class="pp-mobile-entry-spinner" aria-hidden="true"></div><strong>กำลังเชื่อมต่อ LINE</strong>กรุณารอสักครู่ ระบบกำลังดำเนินการ</div>
 <main><h1>เพิ่มเพื่อนไลน์ พีพีแอสเซท</h1>
 <p id="status" role="status" aria-live="polite">กำลังเชื่อมต่อ LINE…</p>
 <a id="openLine" hidden>เพิ่มเพื่อนไลน์ พีพีแอสเซท</a>
