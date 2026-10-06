@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow">
+<title>เชื่อม LINE พีพีแอสเซท</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0A1545;color:#fff;font-family:system-ui,sans-serif;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:16px}main{width:100%;max-width:440px;padding:26px 20px;border:1px solid #6BA232;border-radius:24px;background:linear-gradient(155deg,#0A1545,#071425);text-align:center}h1{font-size:23px;line-height:1.4;margin:8px 0 18px}p{line-height:1.65;color:#dceaf4}button,a{display:block;width:100%;border:0;border-radius:14px;background:#6BA232;color:#fff;padding:16px;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}.spinner{width:32px;height:32px;border:3px solid #619DC4;border-top-color:#6BA232;border-radius:50%;margin:0 auto 18px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}[hidden]{display:none!important}.brand{color:#619DC4;font-size:13px;letter-spacing:.05em}.transport{position:absolute;width:1px;height:1px;left:-9999px;border:0}
+</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js" defer></script>
+</head><body><main>
+<div class="brand">PP ASSET SERVICE</div>
+<h1 id="heading">เชื่อม LINE เพื่อรับรายละเอียดคำขอ</h1>
+<div class="spinner" id="spinner" aria-hidden="true"></div>
+<p id="status" role="status" aria-live="polite">กำลังเชื่อมต่อ LINE กรุณารอสักครู่</p>
+<a id="openLine" hidden>เปิดแอป LINE เพื่อเชื่อมต่อ</a>
+<a id="chat" href="https://line.me/R/oaMessage/%40pp.asset/" hidden>เปิดแชทเพื่อยืนยันข้อมูล</a>
+<button id="retry" type="button" hidden>ลองอีกครั้ง</button>
+</main><script>
+'use strict';
+const LIFF_ID='2011333776-W5vn3Aly';
+// TEST deployment only. Production OAuth configuration is untouched.
+const BACKEND='https://script.google.com/macros/s/AKfycbz1tPDpD1ap5izHhPRhO7wEzc5udW0E-saBnPLB31KpJue0dYF4KgLdlKwVcth8Fh_oHg/exec?mode=liff_receipt_test';
+const statusBox=document.getElementById('status'),spinner=document.getElementById('spinner');
+let busy=false,attempt=0;
+function ticketFromLocation(){
+ const params=new URL(location.href).searchParams;
+ let ticket=params.get('ticket');
+ if(!ticket&&params.get('liff.state'))ticket=new URL(params.get('liff.state'),location.origin+location.pathname).searchParams.get('ticket');
+ try {
+  if(ticket&&/^[A-Za-z0-9_-]{16,200}$/.test(ticket))sessionStorage.setItem('pp_liff_pending',JSON.stringify({ticket,time:Date.now()}));
+  else if(!params.has('ticket')){
+   const saved=JSON.parse(sessionStorage.getItem('pp_liff_pending')||'null');
+   if(saved&&Date.now()-saved.time<600000)ticket=saved.ticket;
+  }
+ }catch(_){}
+ if(!ticket||!/^[A-Za-z0-9_-]{16,200}$/.test(ticket))throw new Error('ลิงก์คำขอไม่ครบ กรุณาเปิดจากปุ่มเชื่อม LINE ของคำขอเดิม');
+ return ticket;
+}
+function withDeadline(promise,ms,message){
+ let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(timer));
+}
+function sendReceipt(ticket,idToken){
+ return new Promise((resolve,reject)=>{
+  const requestId=Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');
+  const iframe=document.createElement('iframe');iframe.name='pp_receipt_'+requestId;iframe.className='transport';iframe.title='รับผลการเชื่อม LINE';iframe.setAttribute('aria-hidden','true');iframe.tabIndex=-1;
+  const form=document.createElement('form');form.method='POST';form.action=BACKEND;form.target=iframe.name;form.hidden=true;
+  for(const [name,value] of Object.entries({ticket,idToken,format:'bridge',requestId})){
+   const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.appendChild(input);
+  }
+  let timer;
+  function cleanup(){clearTimeout(timer);window.removeEventListener('message',received);form.remove();iframe.remove();}
+  function received(event){
+   const trusted=/^https:\/\/(?:script\.google\.com|[a-z0-9-]+\.googleusercontent\.com)$/.test(event.origin);
+   const data=event.data;
+   if(!trusted||!data||data.type!=='pp-line-receipt'||data.requestId!==requestId)return;
+   cleanup();resolve(data.result);
+  }
+  window.addEventListener('message',received);
+  timer=setTimeout(()=>{cleanup();reject(new Error('ยังไม่ได้รับผลยืนยัน กรุณากดลองอีกครั้ง ไม่ต้องกรอกคำขอใหม่'));},45000);
+  document.body.appendChild(iframe);document.body.appendChild(form);form.submit();
+ });
+}
+async function connect(){
+ if(busy)return;busy=true;const run=++attempt;
+ document.getElementById('retry').hidden=true;document.getElementById('openLine').hidden=true;document.getElementById('chat').hidden=true;spinner.hidden=false;
+ statusBox.textContent='กำลังเชื่อมต่อ LINE กรุณารอสักครู่';
+ const waiting=setTimeout(()=>{if(run===attempt)statusBox.textContent='ระบบยังทำงานอยู่ กำลังรอ LINE ตอบกลับ';},6000);
+ try{
+  if(!window.liff)throw new Error('โหลด LINE ไม่สำเร็จ กรุณาลองอีกครั้ง');
+  ticketFromLocation();
+  await withDeadline(liff.init({liffId:LIFF_ID,withLoginOnExternalBrowser:false}),20000,'LINE ตอบกลับช้า กรุณากดลองอีกครั้ง');
+  clearTimeout(waiting);
+  const ticket=ticketFromLocation();
+  if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)&&!liff.isInClient()){
+   const link=document.getElementById('openLine');
+   const url='https://liff.line.me/'+LIFF_ID+'/test-mobile.html?ticket='+encodeURIComponent(ticket);
+   link.href=/Android/i.test(navigator.userAgent)
+    ? 'intent://liff.line.me/'+LIFF_ID+'/test-mobile.html?ticket='+encodeURIComponent(ticket)+'#Intent;scheme=https;package=jp.naver.line.android;S.browser_fallback_url='+encodeURIComponent(location.href)+';end'
+    : url;
+   link.hidden=false;spinner.hidden=true;statusBox.textContent='เปิดแอป LINE เพื่อดำเนินการต่อกับคำขอเดิม';busy=false;return;
+  }
+  if(!liff.isLoggedIn()){statusBox.textContent='กำลังเปิดการยืนยันบัญชี LINE';liff.login({redirectUri:location.origin+location.pathname+'?ticket='+encodeURIComponent(ticket)});return;}
+  const idToken=liff.getIDToken();if(!idToken)throw new Error('ยังยืนยันบัญชี LINE ไม่สำเร็จ กรุณาลองอีกครั้ง');
+  statusBox.textContent='กำลังส่งรายละเอียดคำขอให้ทางแชท LINE';
+  const result=await sendReceipt(ticket,idToken);
+  if(!result||result.success!==true)throw new Error(result&&result.message||'ส่งรายละเอียดไม่สำเร็จ กรุณาลองอีกครั้ง');
+  document.getElementById('heading').textContent='ดำเนินการเรียบร้อย';
+  statusBox.textContent='เลขคำขอ '+result.leadId+' — ส่งรายละเอียดแล้ว กรุณาเปิดแชทเพื่อตรวจสอบและยืนยันความถูกต้อง';
+  spinner.hidden=true;document.getElementById('chat').hidden=false;busy=false;
+ }catch(error){clearTimeout(waiting);spinner.hidden=true;statusBox.textContent=error.message||'เชื่อมต่อไม่สำเร็จ กรุณาลองอีกครั้ง';document.getElementById('retry').hidden=false;busy=false;}
+}
+document.getElementById('retry').addEventListener('click',connect);
+window.addEventListener('DOMContentLoaded',connect);
+</script></body></html>
