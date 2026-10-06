@@ -17,6 +17,22 @@
 const LIFF_ID='2011333776-W5vn3Aly';
 const BACKEND='https://script.google.com/macros/s/AKfycbz1tPDpD1ap5izHhPRhO7wEzc5udW0E-saBnPLB31KpJue0dYF4KgLdlKwVcth8Fh_oHg/exec?mode=liff_receipt_test';
 let busy=false;
+function pendingTicket() {
+  const params=new URL(location.href).searchParams;
+  let ticket=params.get('ticket');
+  if(!ticket && params.get('liff.state')) {
+    ticket=new URL(params.get('liff.state'),location.origin+location.pathname).searchParams.get('ticket');
+  }
+  try {
+    if(ticket && /^[A-Za-z0-9_-]{16,200}$/.test(ticket)) {
+      sessionStorage.setItem('pp_liff_pending',JSON.stringify({ticket,time:Date.now()}));
+    } else {
+      const saved=JSON.parse(sessionStorage.getItem('pp_liff_pending')||'null');
+      if(saved && Date.now()-saved.time<600000)ticket=saved.ticket;
+    }
+  } catch(_) {}
+  return ticket;
+}
 async function connect() {
   if(busy)return;busy=true;
   const status=document.getElementById('status'),retry=document.getElementById('retry');
@@ -25,6 +41,7 @@ async function connect() {
   const waiting=setTimeout(()=>{status.textContent='กำลังรอ LINE ตอบกลับ กรุณารอสักครู่…';},6000);
   try {
     if(!window.liff)throw new Error('โหลด LINE ไม่สำเร็จ กรุณาลองอีกครั้ง');
+    pendingTicket();
     let deadline;
     try {
       await Promise.race([liff.init({liffId:LIFF_ID,withLoginOnExternalBrowser:false}),new Promise((_,reject)=>{deadline=setTimeout(()=>reject(new Error('LINE ตอบกลับช้า กรุณากดลองอีกครั้ง ไม่ต้องกรอกฟอร์มใหม่')),20000);})]);
@@ -46,10 +63,14 @@ async function connect() {
       link.hidden=false;status.textContent='กดปุ่มด้านล่างเพื่อเปิดแอป LINE และรับรายละเอียดรายการ';
       busy=false;return;
     }
-    if(!liff.isLoggedIn()){liff.login();return;}
+    if(!liff.isLoggedIn()){
+      const ticket=pendingTicket();
+      if(!ticket || !/^[A-Za-z0-9_-]{16,200}$/.test(ticket))throw new Error('กรุณากลับไปกดเพิ่มเพื่อน LINE จากรายการที่ส่งแล้ว');
+      liff.login({redirectUri:location.origin+location.pathname+'?ticket='+encodeURIComponent(ticket)});return;
+    }
     if(!liff.isLoggedIn())return;
     // LIFF handles its redirects before reading the final ticket.
-    const ticket=new URL(location.href).searchParams.get('ticket');
+    const ticket=pendingTicket();
     const idToken=liff.getIDToken();
     if(!ticket || !/^[A-Za-z0-9_-]{16,200}$/.test(ticket))throw new Error('กรุณากลับไปกดเพิ่มเพื่อน LINE จากรายการที่ส่งแล้ว');
     if(!idToken)throw new Error('ยืนยันบัญชี LINE ไม่สำเร็จ กรุณาลองอีกครั้ง');
