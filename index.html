@@ -10,6 +10,7 @@
 <body>
 <main><h1>เพิ่มเพื่อน LINE พี่ผึ้ง</h1>
 <p id="status" role="status" aria-live="polite">กำลังเชื่อมต่อ LINE…</p>
+<a id="openLine" hidden>เพิ่มเพื่อน LINE พี่ผึ้ง</a>
 <button id="retry" type="button" hidden>ลองอีกครั้ง</button></main>
 <script>
 'use strict';
@@ -22,7 +23,24 @@ async function connect() {
   retry.hidden=true;
   try {
     if(!window.liff)throw new Error('โหลด LINE ไม่สำเร็จ กรุณาลองอีกครั้ง');
-    await liff.init({liffId:LIFF_ID,withLoginOnExternalBrowser:true});
+    await liff.init({liffId:LIFF_ID,withLoginOnExternalBrowser:false});
+    const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if(mobile && !liff.isInClient()) {
+      const params=new URL(location.href).searchParams;
+      let ticket=params.get('ticket');
+      if(!ticket && params.get('liff.state')) {
+        ticket=new URL(params.get('liff.state'),'https://ppassetservice-cyber.github.io/pp-line-liff-test/').searchParams.get('ticket');
+      }
+      if(!ticket || !/^[A-Za-z0-9_-]{16,200}$/.test(ticket))throw new Error('กรุณากลับไปกดเพิ่มเพื่อน LINE จากรายการที่ส่งแล้ว');
+      const link=document.getElementById('openLine');
+      const url='https://liff.line.me/'+LIFF_ID+'?ticket='+encodeURIComponent(ticket);
+      link.href=/Android/i.test(navigator.userAgent)
+        ? 'intent://liff.line.me/'+LIFF_ID+'?ticket='+encodeURIComponent(ticket)+'#Intent;scheme=https;package=jp.naver.line.android;S.browser_fallback_url='+encodeURIComponent(location.href)+';end'
+        : url;
+      link.hidden=false;status.textContent='กดปุ่มด้านล่างเพื่อเปิดแอป LINE และรับรายละเอียดรายการ';
+      busy=false;return;
+    }
+    if(!liff.isLoggedIn()){liff.login();return;}
     if(!liff.isLoggedIn())return;
     // LIFF handles its redirects before reading the final ticket.
     const ticket=new URL(location.href).searchParams.get('ticket');
