@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>TEST — เชื่อม LINE กับคำขอประกัน | PP Asset Service</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#071B34;color:#D7F3FF;font:16px Tahoma,sans-serif}
+    main{max-width:560px;margin:32px auto;padding:24px}h1{font-size:25px;color:#67C9FD;line-height:1.5}
+    p,label{line-height:1.8}button{font:inherit;font-weight:bold;background:#67C9FD;color:#01122B;border:1px solid #B0E8FF;border-radius:16px;padding:14px 20px;cursor:pointer}
+    button:disabled{opacity:.5;cursor:wait}.consent{display:flex;gap:12px;margin:24px 0}input{width:22px;height:22px;flex-shrink:0;margin-top:4px}
+    #status{white-space:pre-line}a{color:#67C9FD}:focus-visible{outline:3px solid #B0E8FF;outline-offset:4px}
+  </style>
+</head>
+<body><main>
+  <p>PP ASSET SERVICE · TEST</p>
+  <h1>เชื่อม LINE กับคำขอเช็กเบี้ย</h1>
+  <p>คำขอของคุณบันทึกไว้แล้ว ขั้นตอนนี้ใช้เชื่อมบัญชี LINE เพื่อให้เจ้าหน้าที่ติดต่อเกี่ยวกับคำขอประกัน</p>
+  <p id="status" role="status" aria-live="polite">กำลังเตรียม LINE...</p>
+  <label class="consent"><input type="checkbox" id="consent">ฉันยินยอมให้เชื่อมบัญชี LINE และชื่อที่แสดงกับคำขอเช็กเบี้ย เพื่อรับการติดต่อและข้อความเกี่ยวกับคำขอนี้</label>
+  <button type="button" id="connect" disabled>ยืนยันการเชื่อม LINE</button>
+  <p><a href="https://line.me/R/ti/p/%40pp.asset" rel="noopener noreferrer">เพิ่มเพื่อน LINE OA @pp.asset</a></p>
+  <p>หากไม่เชื่อม LINE เจ้าหน้าที่ยังติดต่อกลับทางเบอร์โทรศัพท์ที่ให้ไว้ได้</p>
+</main>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+(function () {
+  'use strict';
+  // Replace only after creating the NEW insurance TEST web-app deployment.
+  var BACKEND_URL = 'https://script.google.com/macros/s/AKfycbySsRLCbwnj8PTmRTrWor8YZB-7UD32fPWulcbpCLZM95LW6AMpFRci16Pal2AnwHqM/exec';
+  var LIFF_ID = '2011333776-7CCq2hRE';
+  var ENDPOINT = 'https://ppassetservice-cyber.github.io/pp-line-liff-test/insurance.html';
+  var STORAGE_KEY = 'pp-insurance-line-ticket-v1';
+  var status = document.getElementById('status'), button = document.getElementById('connect');
+  var consent = document.getElementById('consent'), ready = false, busy = false, ticket = '';
+  function show(text) { status.textContent = text; }
+  function valid(value) { return /^[a-f0-9]{64}$/.test(value || ''); }
+  function remember(value) {
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ticket:value, until:Date.now()+600000})); } catch(e) {}
+  }
+  function readTicket() {
+    var query = new URLSearchParams(location.search), direct = query.get('ticket');
+    var state = query.get('liff.state');
+    if (!direct && state) {
+      var stateUrl = new URL(state, location.origin);
+      direct = stateUrl.searchParams.get('ticket');
+    }
+    if (valid(direct)) { remember(direct); return direct; }
+    try {
+      var saved = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null');
+      if (saved && saved.until > Date.now() && valid(saved.ticket)) return saved.ticket;
+    } catch(e) {}
+    return '';
+  }
+  function updateButton() { button.disabled = !ready || busy || !consent.checked; }
+  consent.addEventListener('change', updateButton);
+  async function initialize() {
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(BACKEND_URL)) {
+      show('หน้าเชื่อม LINE อยู่ระหว่างเตรียมทดสอบ คำขอที่บันทึกไว้ยังอยู่ครบ'); return;
+    }
+    ticket = readTicket();
+    if (!ticket) { show('ไม่พบลิงก์คำขอ กรุณากลับไปหน้าแบบฟอร์มเดิมแล้วกดเชื่อม LINE'); return; }
+    try {
+      await Promise.race([liff.init({liffId:LIFF_ID}), new Promise(function(_, reject) {
+        setTimeout(function(){reject(new Error('timeout'));},20000);
+      })]);
+      // liff.init may perform a secondary redirect; do not alter its query parameters beforehand.
+      ticket = readTicket() || ticket;
+      if (!liff.isLoggedIn()) {
+        liff.login({redirectUri:ENDPOINT + '?ticket=' + encodeURIComponent(ticket)}); return;
+      }
+      if (!liff.getIDToken()) throw new Error('missing token');
+      ready = true; show('พร้อมเชื่อม LINE กรุณาอ่านและให้ความยินยอมก่อนยืนยัน'); updateButton();
+    } catch(e) {
+      show('ยังเตรียม LINE ไม่สำเร็จ กรุณาเปิดลิงก์ใหม่จากหน้าแบบฟอร์มเดิม');
+    }
+  }
+  button.addEventListener('click', function () {
+    if (!ready || busy || !consent.checked || !valid(ticket)) return;
+    var token = liff.getIDToken();
+    if (!token) { show('กรุณาเปิดลิงก์ใหม่เพื่อเข้าสู่ระบบ LINE'); return; }
+    busy = true; updateButton(); show('กำลังยืนยันและเชื่อม LINE...');
+    // A top-level form POST avoids CORS. No token or customer details are placed in a URL.
+    var form = document.createElement('form');
+    form.method = 'POST'; form.action = BACKEND_URL; form.target = '_self'; form.hidden = true;
+    var data = {flow:'insurance-line-link-v1', ticket:ticket, idToken:token, consent:'yes'};
+    Object.keys(data).forEach(function(key) {
+      var input = document.createElement('input'); input.type = 'hidden'; input.name = key;
+      input.value = data[key]; form.appendChild(input);
+    });
+    document.body.appendChild(form); form.submit();
+  });
+  initialize();
+}());
+</script>
+</body></html>
