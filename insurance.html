@@ -91,7 +91,32 @@ async function connect(){
    link.hidden=false;spinner.hidden=true;statusBox.textContent='เปิดแอป LINE เพื่อดำเนินการต่อกับคำขอเดิม';busy=false;return;
   }
   if(!liff.isLoggedIn()){statusBox.textContent='กำลังเปิดการยืนยันบัญชี LINE';liff.login({redirectUri:location.origin+location.pathname+'?ticket='+encodeURIComponent(ticket)});return;}
-  const idToken=liff.getIDToken();if(!idToken)throw new Error('ยังยืนยันบัญชี LINE ไม่สำเร็จ กรุณาลองอีกครั้ง');
+  const idToken = liff.getIDToken();
+const tokenInfo = liff.getDecodedIDToken();
+const tokenExpires = Number(tokenInfo && tokenInfo.exp);
+
+if (!idToken || !Number.isFinite(tokenExpires) ||
+    tokenExpires <= Date.now() / 1000 + 60) {
+  if (liff.isInClient()) {
+    throw new Error('กรุณาปิดหน้านี้ แล้วเปิดลิงก์คำขอเดิมจาก LINE อีกครั้ง');
+  }
+
+  const renewKey = 'pp_insurance_login_renew';
+  const lastRenew = Number(sessionStorage.getItem(renewKey) || 0);
+  if (Date.now() - lastRenew < 60000) {
+    throw new Error('ยังยืนยันบัญชีไม่สำเร็จ กรุณารอสักครู่แล้วกดลองอีกครั้ง');
+  }
+
+  sessionStorage.setItem(renewKey, String(Date.now()));
+  statusBox.textContent = 'กำลังเข้าสู่ระบบ LINE ใหม่เพื่อรับรายละเอียดคำขอเดิม';
+  liff.logout();
+  liff.login({
+    redirectUri: location.origin + location.pathname +
+      '?ticket=' + encodeURIComponent(ticket)
+  });
+  return;
+}
+sessionStorage.removeItem('pp_insurance_login_renew');
   const friendship=await withDeadline(liff.getFriendship(),20000,'ตรวจสถานะเพื่อน LINE ไม่สำเร็จ กรุณาลองอีกครั้ง');
   if(!friendship.friendFlag){
    const friendLink=document.getElementById('openLine');friendLink.href='https://line.me/R/ti/p/%40pp.asset';friendLink.textContent='เพิ่มเพื่อน PP Asset Service';friendLink.hidden=false;
