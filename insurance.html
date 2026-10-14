@@ -231,12 +231,12 @@ async function connect(){
   try{
     const initialQuote=locationParam('quote');
     if(initialQuote===null)ticketFromLocation();
-    else if(!/^INS-\d{8}-[A-F0-9]{16}$/.test(initialQuote))throw new Error('ลิงก์ยืนยันไม่ครบ กรุณาเปิดจากรายละเอียดคำขอใน LINE');
+    else if(!/^(?:INS\d{6,}|INS-\d{8}-[A-F0-9]{16})$/.test(initialQuote))throw new Error('ลิงก์ยืนยันไม่ครบ กรุณาเปิดจากรายละเอียดคำขอใน LINE');
     await initLine();
     const quote=locationParam('quote');
     const name=quote===null?'ticket':'quote';
     const value=quote===null?ticketFromLocation():quote;
-    if(name==='quote'&&!/^INS-\d{8}-[A-F0-9]{16}$/.test(value))throw new Error('ลิงก์ยืนยันไม่ครบ กรุณาเปิดจากรายละเอียดคำขอใน LINE');
+    if(name==='quote'&&!/^(?:INS\d{6,}|INS-\d{8}-[A-F0-9]{16})$/.test(value))throw new Error('ลิงก์ยืนยันไม่ครบ กรุณาเปิดจากรายละเอียดคำขอใน LINE');
     if(showOpenLine(name,value))return;
     const idToken=freshToken(name,value);
     if(!idToken)return;
