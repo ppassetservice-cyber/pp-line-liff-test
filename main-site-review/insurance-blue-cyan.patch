@@ -1,0 +1,51 @@
+diff --git a/app/globals.css b/app/globals.css
+index 18253a2..9e4a056 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -5674,3 +5674,46 @@ body:has(#contact:target) .main-nav a[href="#contact"]::after {
+     font-size: 1.5rem;
+   }
+ }
++
++/* Insurance section only: approved blue/cyan palette, 15 October 2026. */
++#insurance.insurance-section {
++  --lime-500: #42cfff;
++  background:
++    radial-gradient(circle at 88% 5%, rgba(66,207,255,.14), transparent 26%),
++    radial-gradient(circle at 10% 90%, rgba(18,102,217,.24), transparent 30%),
++    var(--navy-950);
++}
++#insurance .insurance-cta {
++  color:#fff;
++  background:linear-gradient(135deg,#1266d9,#1052a3);
++  border-color:#42cfff;
++  box-shadow:0 0 22px rgba(66,207,255,.3),0 5px 0 #073a76;
++}
++#insurance .insurance-cta:hover {
++  background:linear-gradient(135deg,#1a7cce,#1266d9);
++  box-shadow:0 0 30px rgba(66,207,255,.45),0 5px 0 #073a76;
++}
++#insurance .insurance-cta:focus-visible {outline:2px solid #42cfff;outline-offset:5px;}
++#insurance .insurance-process-panel,
++#insurance .insurance-service-card,
++#insurance .insurance-company-showcase {
++  border-color:rgba(66,207,255,.5);
++  box-shadow:0 0 0 1px rgba(66,207,255,.1),0 0 26px rgba(66,207,255,.18);
++}
++#insurance .insurance-company-showcase {background:rgba(18,102,217,.065);}
++#insurance .insurance-process-heading {border-bottom-color:rgba(66,207,255,.24);}
++#insurance .insurance-process-step {border-color:rgba(66,207,255,.65);box-shadow:0 0 12px rgba(66,207,255,.12);}
++#insurance .insurance-service-index {color:#42cfff;}
++#insurance .insurance-service-image {
++  border-color:rgba(66,207,255,.65);
++  background:radial-gradient(circle,rgba(255,255,255,.18),rgba(18,102,217,.14) 58%,rgba(66,207,255,.03) 74%);
++  box-shadow:inset 0 1px 0 rgba(255,255,255,.34),0 0 0 1px rgba(66,207,255,.14),0 3px 0 rgba(1,6,18,.62),0 8px 0 rgba(1,6,18,.28),0 16px 22px rgba(1,6,18,.3),0 0 19px rgba(66,207,255,.32);
++}
++#insurance .insurance-service-icon-asset {
++  filter:grayscale(1) sepia(1) saturate(4) hue-rotate(155deg) brightness(1.12);
++}
++#insurance .section-kicker,
++#insurance .insurance-title-secondary,
++#insurance .insurance-process-heading h3,
++#insurance .insurance-service-card h3,
++#insurance .insurance-company-heading h2 {text-shadow:0 0 16px rgba(66,207,255,.2);}
