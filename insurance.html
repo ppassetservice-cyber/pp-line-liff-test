@@ -184,12 +184,13 @@ function renderDetails(data){
     ['ปีจดทะเบียน / จังหวัด',[data.registration_year,data.registration_province].join(' / ')],
     ['การใช้งาน',data.usage_type],
     ['ประเภทประกัน','ชั้น '+data.insurance_type],
-    ['บริษัทที่สนใจ',data.preferred_insurers]
+    ['บริษัทที่สนใจ',data.preferred_insurers],
+    ['ความต้องการเพิ่มเติม / หมายเหตุ',data.contact_note]
   ];
   for(const [label,value]of fields){
     const row=document.createElement('div');row.className='field';
     const title=document.createElement('span');title.className='field-label';title.textContent=label;
-    const content=document.createElement('span');content.textContent=String(value||'ไม่ระบุ');
+    const content=document.createElement('span');content.textContent=String(value||'ไม่ระบุ');content.style.whiteSpace='pre-wrap';
     row.append(title,content);details.appendChild(row);
   }
   details.hidden=false;
